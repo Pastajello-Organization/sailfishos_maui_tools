@@ -1,0 +1,327 @@
+{
+  "name": "maui-sailfish-tools",
+  "displayName": "MAUI Sailfish Tools",
+  "description": "Connect to a Sailfish OS phone, deploy and debug .NET MAUI apps on it (F5).",
+  "version": "0.1.0",
+  "publisher": "Pastajello",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Debuggers",
+    "Other"
+  ],
+  "extensionDependencies": [
+    "ms-dotnettools.csharp"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/*.csproj",
+    "onDebugResolve:sailfish",
+    "onDebugDynamicConfigurations:sailfish"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "mauiSailfish.selectDevice",
+        "title": "Select Device",
+        "category": "MAUI Sailfish"
+      },
+      {
+        "command": "mauiSailfish.selectConfiguration",
+        "title": "Select Build Configuration (Debug / Release)",
+        "category": "MAUI Sailfish",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "mauiSailfish.addDevice",
+        "title": "Add Device\u2026",
+        "category": "MAUI Sailfish",
+        "icon": "$(add)"
+      },
+      {
+        "command": "mauiSailfish.refreshDevices",
+        "category": "MAUI Sailfish",
+        "title": "Refresh Devices",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "mauiSailfish.useDevice",
+        "category": "MAUI Sailfish",
+        "title": "Use This Device",
+        "icon": "$(check)"
+      },
+      {
+        "command": "mauiSailfish.checkConnection",
+        "title": "Check Device Connection",
+        "category": "MAUI Sailfish",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "mauiSailfish.pairKey",
+        "title": "Pair SSH Key with Device",
+        "category": "MAUI Sailfish",
+        "icon": "$(key)"
+      },
+      {
+        "command": "mauiSailfish.setPassword",
+        "title": "Set Developer-Mode Password\u2026",
+        "category": "MAUI Sailfish",
+        "icon": "$(lock)"
+      },
+      {
+        "command": "mauiSailfish.pushDebugger",
+        "title": "Push Debugger (vsdbg) to Device",
+        "category": "MAUI Sailfish",
+        "icon": "$(debug-alt)"
+      },
+      {
+        "command": "mauiSailfish.stopApp",
+        "title": "Stop App on Device",
+        "category": "MAUI Sailfish",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "mauiSailfish.forgetDevice",
+        "title": "Forget Device\u2026",
+        "category": "MAUI Sailfish",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "mauiSailfish.copyPublicKey",
+        "category": "MAUI Sailfish",
+        "title": "Copy Public Key",
+        "icon": "$(copy)"
+      }
+    ],
+    "configuration": {
+      "title": "MAUI Sailfish",
+      "properties": {
+        "mauiSailfish.sshKeyPath": {
+          "type": "string",
+          "default": "",
+          "description": "Private key used for the device. Empty: ~/.ssh/id_ed25519 when it exists, else a dedicated key in ~/.config/maui-sailfish/id_ed25519 (created on pairing)."
+        },
+        "mauiSailfish.vsdbgPath": {
+          "type": "string",
+          "default": "",
+          "description": "Local linux-arm64 vsdbg directory pushed to the device. Empty: ~/.vsdbg-linux-arm64."
+        },
+        "mauiSailfish.runtimeIdentifier": {
+          "type": "string",
+          "default": "linux-arm64",
+          "enum": [
+            "linux-arm64",
+            "linux-arm"
+          ],
+          "description": "Runtime identifier of the phone."
+        }
+      }
+    },
+    "debuggers": [
+      {
+        "type": "sailfish",
+        "label": "MAUI Sailfish",
+        "languages": [
+          "csharp"
+        ],
+        "configurationAttributes": {
+          "launch": {
+            "properties": {
+              "project": {
+                "type": "string",
+                "description": "The .csproj to deploy. Empty: the workspace's net11.0-sailfish project (asks when there are several)."
+              },
+              "configuration": {
+                "type": "string",
+                "enum": [
+                  "Debug",
+                  "Release"
+                ],
+                "enumDescriptions": [
+                  "Untrimmed, installs as <package>-debug next to a Release install.",
+                  "Trimmed and ReadyToRun, the build you ship; installs as <package>."
+                ],
+                "description": "Build configuration. Empty: the Debug | Release switch in the status bar."
+              },
+              "env": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Environment variables for the app process on the phone."
+              },
+              "justMyCode": {
+                "type": "boolean",
+                "description": "Only stop in user code. Default: true for Debug, false for Release (optimized code would count as not yours)."
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "name": "MAUI Sailfish: Debug on device",
+            "type": "sailfish",
+            "request": "launch"
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "MAUI Sailfish: Run on device",
+            "description": "Build (Debug or Release from the status bar), install and debug on the Sailfish OS phone.",
+            "body": {
+              "name": "MAUI Sailfish: Run on device",
+              "type": "sailfish",
+              "request": "launch"
+            }
+          },
+          {
+            "label": "MAUI Sailfish: Release on device (fixed)",
+            "description": "Always the trimmed Release build, whatever the status bar says.",
+            "body": {
+              "name": "MAUI Sailfish: Release on device",
+              "type": "sailfish",
+              "request": "launch",
+              "configuration": "Release"
+            }
+          }
+        ]
+      }
+    ],
+    "taskDefinitions": [
+      {
+        "type": "sailfish",
+        "required": [
+          "step"
+        ],
+        "properties": {
+          "step": {
+            "type": "string",
+            "description": "The MAUI Sailfish step this task runs (publish)."
+          }
+        }
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "mauiSailfish",
+          "title": "MAUI Sailfish",
+          "icon": "resources/sailfish.svg"
+        }
+      ]
+    },
+    "views": {
+      "mauiSailfish": [
+        {
+          "id": "mauiSailfish.devices",
+          "name": "Devices",
+          "icon": "resources/sailfish.svg",
+          "contextualTitle": "MAUI Sailfish"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "mauiSailfish.devices",
+        "contents": "No Sailfish OS phone yet.\n[Add Device](command:mauiSailfish.addDevice)\nThe phone needs Developer mode with Remote connection on: Settings > Developer tools. Devices are shared by all your workspaces."
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "mauiSailfish.addDevice",
+          "when": "view == mauiSailfish.devices",
+          "group": "navigation@1"
+        },
+        {
+          "command": "mauiSailfish.refreshDevices",
+          "when": "view == mauiSailfish.devices",
+          "group": "navigation@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "mauiSailfish.checkConnection",
+          "when": "view == mauiSailfish.devices && viewItem =~ /^device/",
+          "group": "inline@2"
+        },
+        {
+          "command": "mauiSailfish.useDevice",
+          "when": "view == mauiSailfish.devices && viewItem == device",
+          "group": "inline@1"
+        },
+        {
+          "command": "mauiSailfish.copyPublicKey",
+          "when": "view == mauiSailfish.devices && viewItem == sshKey",
+          "group": "inline"
+        },
+        {
+          "command": "mauiSailfish.useDevice",
+          "when": "view == mauiSailfish.devices && viewItem == device",
+          "group": "1_use@1"
+        },
+        {
+          "command": "mauiSailfish.checkConnection",
+          "when": "view == mauiSailfish.devices && viewItem =~ /^device/",
+          "group": "1_use@2"
+        },
+        {
+          "command": "mauiSailfish.pairKey",
+          "when": "view == mauiSailfish.devices && viewItem =~ /^device/",
+          "group": "2_setup@1"
+        },
+        {
+          "command": "mauiSailfish.setPassword",
+          "when": "view == mauiSailfish.devices && viewItem =~ /^device/",
+          "group": "2_setup@2"
+        },
+        {
+          "command": "mauiSailfish.pushDebugger",
+          "when": "view == mauiSailfish.devices && viewItem =~ /^device/",
+          "group": "2_setup@3"
+        },
+        {
+          "command": "mauiSailfish.stopApp",
+          "when": "view == mauiSailfish.devices && viewItem =~ /^device/",
+          "group": "3_app@1"
+        },
+        {
+          "command": "mauiSailfish.forgetDevice",
+          "when": "view == mauiSailfish.devices && viewItem =~ /^device/",
+          "group": "4_forget@1"
+        },
+        {
+          "command": "mauiSailfish.copyPublicKey",
+          "when": "view == mauiSailfish.devices && viewItem == sshKey",
+          "group": "1_key"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "mauiSailfish.useDevice",
+          "when": "false"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "typecheck": "tsc --noEmit -p .",
+    "test": "tsc -p tsconfig.test.json && node --test out/test/*.test.js",
+    "package": "npm run typecheck && node esbuild.mjs --production && vsce package --no-dependencies"
+  },
+  "dependencies": {
+    "ssh2": "^1.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/ssh2": "^1.15.0",
+    "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.0.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.0"
+  }
+}
