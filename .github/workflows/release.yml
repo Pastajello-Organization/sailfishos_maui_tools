@@ -1,9 +1,22 @@
-name: Release VS Code Extension
+name: Build & Release VS Code Extension
 
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      package:
+        description: "Create VSIX package"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -11,6 +24,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -18,16 +33,40 @@ jobs:
 
       - run: npm install
 
+      # Set version from tag
       - name: Set version from tag
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
           npm version $VERSION --no-git-tag-version
 
+      # Build (includes grammar generation)
       - run: npm run build
 
-      - run: npx vsce package
+      # Publish to VS Code Marketplace (also creates VSIX)
+      - name: Publish to VS Code Marketplace
+        if: startsWith(github.ref, 'refs/tags/')
+        run: npx vsce publish -p $VSCE_PAT
+        env:
+          VSCE_PAT: ${{ secrets.MARKETPLACE_PAT }}
 
-      - uses: softprops/action-gh-release@v2
+      # Manual packaging only
+      - name: Package extension (manual only)
+        if: github.event_name == 'workflow_dispatch' && inputs.package == 'true'
+        run: npx vsce package --no-dependencies
+
+      # Upload artifact for manual runs
+      - name: Upload VSIX
+        if: github.event_name == 'workflow_dispatch' && inputs.package == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: vsix-package
+          path: "*.vsix"
+
+      # Create GitHub release and attach VSIX
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
         with:
           files: "*.vsix"
         env:
